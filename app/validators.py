@@ -7,8 +7,10 @@ async def isUserInVerifiedGroup(update: Update, context: ContextTypes.DEFAULT_TY
 	user_id = update.message.from_user.id
 	chat_id = "-100" + TELEGRAM_VERIFY_GROUP_ID # Note that -100 in the beginning is to identify that this is a GROUP id. (If you remove it, it won't work)
 	try:
-		if (await context.bot.getChatMember(chat_id,user_id)): # this line throws an exception when user isn't in the group
-			return True
+		member = await context.bot.getChatMember(chat_id, user_id) # this line throws an exception when user isn't in the group
+		if member:
+			if (member.status == member.OWNER or member.status == member.ADMINISTRATOR or member.status == member.MEMBER):
+				return True
 		return False
 	except Exception as e:
 		if repr(e) == "BadRequest('Participant_id_invalid')":
