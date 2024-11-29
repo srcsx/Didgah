@@ -49,3 +49,19 @@ def deleteAllProfs() -> int:
     res = Prof.delete().execute()
     closeDb()
     return res
+
+
+def findById(prof_id: int) -> Prof:
+    """Retrieve saved information of a professor based on their ID
+
+    Args:
+        prof_id (int): professor's column ID
+
+
+    Returns:
+        Prof: Prof object or None
+    """
+    connectDb()
+    prof = Prof.get_or_none(id=prof_id)
+    closeDb()
+    return prof
