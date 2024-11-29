@@ -22,3 +22,30 @@ def createProf(name: str) -> int:
     
     closeDb()
     return res
+
+
+def deleteProf(prof_id: int) -> int:
+    """This function receives the professor's column ID and delete it from the database
+
+    Args:
+        prof_id (int): professor's column ID
+
+    Returns:
+        int: Number of deleted columns
+    """
+    connectDb()
+    res = Prof.delete_by_id(prof_id)
+    closeDb()
+    return res
+
+
+def deleteAllProfs() -> int:
+    """This function will delete all professors from the database
+
+    Returns:
+        int: Number of deleted columns
+    """
+    connectDb()
+    res = Prof.delete().execute()
+    closeDb()
+    return res
