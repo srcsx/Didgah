@@ -11,3 +11,9 @@ async def newComment(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     ]
     reply = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text("Choose a professor:", reply_markup=reply)
+    
+async def newCommentClickHandler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    await query.answer()
+    selected_name = query.data
+    await query.edit_message_text(f"You selected: {selected_name}")
