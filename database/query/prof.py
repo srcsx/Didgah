@@ -1,7 +1,6 @@
 from typing import List
 
 from database.models import Prof
-from database.db_utils import closeDb, connectDb
 
 
 def createProf(name: str) -> int:
@@ -14,7 +13,6 @@ def createProf(name: str) -> int:
         int: The output of this function is the professor's column ID or -1,
             where -1 indicates that the operation has encountered an error.
     """
-    connectDb()
     
     try:
         res = Prof.insert(name=name).execute() # execute() will return column ID
@@ -22,7 +20,6 @@ def createProf(name: str) -> int:
         # TODO: logging
         res = -1
     
-    closeDb()
     return res
 
 
@@ -35,9 +32,7 @@ def deleteProf(prof_id: int) -> int:
     Returns:
         int: Number of deleted columns
     """
-    connectDb()
     res = Prof.delete_by_id(prof_id)
-    closeDb()
     return res
 
 
@@ -47,9 +42,7 @@ def deleteAllProfs() -> int:
     Returns:
         int: Number of deleted columns
     """
-    connectDb()
     res = Prof.delete().execute()
-    closeDb()
     return res
 
 
@@ -69,7 +62,5 @@ def findProfById(prof_id: int) -> Prof:
     Returns:
         Prof: Prof object or None
     """
-    connectDb()
     prof = Prof.get_or_none(id=prof_id)
-    closeDb()
     return prof
