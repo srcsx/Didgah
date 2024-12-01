@@ -21,6 +21,31 @@ async def lessonFlow(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     reply = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text("Click the button below to choose a lesson:", reply_markup=reply)
     
+async def inlineQuery(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.inline_query.query.lower()
+    if query.startswith("#professors"):
+        keyword = query[len("#professors"):].strip()
+        results = [
+            InlineQueryResultArticle(
+                id=str(uuid4()),
+                title=professor,
+                input_message_content=InputTextMessageContent(professor),
+            )
+            for professor in professors if keyword in professor.lower()
+        ]
+        await update.inline_query.answer(results)
+    elif query.startswith("#lessons"):
+        keyword = query[len("#lessons"):].strip()
+        results = [
+            InlineQueryResultArticle(
+                id=str(uuid4()),
+                title=lesson,
+                input_message_content=InputTextMessageContent(lesson),
+            )
+            for lesson in lessons if keyword in lesson.lower()
+        ]
+        await update.inline_query.answer(results)
+        
 async def FlowButtonHandler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     await query.answer()
