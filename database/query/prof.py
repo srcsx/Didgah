@@ -1,3 +1,5 @@
+from typing import List
+
 from database.models import Prof
 from database.db_utils import closeDb, connectDb
 
@@ -51,7 +53,13 @@ def deleteAllProfs() -> int:
     return res
 
 
-def findById(prof_id: int) -> Prof:
+def selectAllProfs() -> List[Prof]:
+    """This function will return all saved professors in database
+    """
+    return Prof.select().execute()
+
+
+def findProfById(prof_id: int) -> Prof:
     """Retrieve saved information of a professor based on their ID
 
     Args:
