@@ -7,11 +7,11 @@ class BaseModel(Model):
 
 
 class Prof(BaseModel):
-    name = CharField()
+    name = CharField(unique=True)
 
 
 class Course(BaseModel):
-    name = CharField(max_length=256)
+    name = CharField(max_length=256, unique=True)
 
 
 class Comment(BaseModel):
