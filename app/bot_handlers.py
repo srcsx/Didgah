@@ -1,9 +1,7 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InlineQueryResultArticle, InputTextMessageContent
 from telegram.ext import ContextTypes
 from uuid import uuid4
-
-async def startCommand(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await update.message.reply_text(f'Hello {update.effective_user.first_name}')
+from validators import isUserInVerifiedGroup
 
 user_data = {}
 professors_name = ["professor1" , "professor2" , "professor3"]
@@ -18,11 +16,22 @@ def initializeUser(user_id: int) -> None:
             "comment": None
         }
 
+async def startCommand(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user_id = update.message.from_user.id
+    initializeUser(user_id)
+    await update.message.reply_text(f'Hello {update.effective_user.first_name}')
+    if isUserInVerifiedGroup(update , context):
+        await mainFlow(update , context)
+    else:
+        await update.message.reply_text("Please first join the channel.")
+
 async def mainFlow(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Main menu interaction to select professor, lesson, or comment."""
     user_id = update.message.from_user.id
     initializeUser(user_id)
-
+    if not isUserInVerifiedGroup(update , context):
+        await update.message.reply_text("Please first join the channel.")
+        return
     keyboard = [
         [InlineKeyboardButton("Choose your professor", switch_inline_query_current_chat="#professors"),
          InlineKeyboardButton("Choose your lesson", switch_inline_query_current_chat="#lessons")],
@@ -63,6 +72,10 @@ async def messageHandler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     """Handles regular text messages and processes user comments and selections."""
     user_id = update.message.from_user.id
     initializeUser(user_id)
+    
+    if not isUserInVerifiedGroup(update , context):
+        await update.message.reply_text("Please first join the channel.")
+        return
 
     message = update.message.text.strip()
 
@@ -90,7 +103,7 @@ async def messageHandler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         user_data[user_id].update({"selected_professor": None, "selected_lesson": None})
         await update.message.reply_text("Selections reset. You can choose again.")
 
-    elif user_data[user_id]["awaiting_comment"]:
+    elif user_data[user_id]["awaiting_comment"] and user_data[user_id]["selected_professor"] and user_data[user_id]["selected_lesson"]:
         user_data[user_id]["comment"] = message
         user_data[user_id]["awaiting_comment"] = False
         await update.message.reply_text("Your comment has been saved.")
@@ -101,13 +114,13 @@ async def CommentHandler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     query = update.callback_query
     user_id = query.from_user.id
     await query.answer()
-    
-    if query.data.startswith("comment"):
-        if user_data[user_id]["selected_professor"] and user_data[user_id]["selected_lesson"]:
-            await query.message.reply_text("Write your comment:")
-            user_data[user_id]["awaiting_comment"] = True
-        else:
-            await query.message.reply_text("Please first select a professor and a lesson to send a comment.")
+
+    user = user_data.get(user_id, {})
+    if user.get("selected_professor") and user.get("selected_lesson"):
+        await query.message.reply_text("Write your comment:")
+        user["awaiting_comment"] = True
+    else:
+        await query.message.reply_text("Please select a professor and a lesson before commenting.")
             
 async def unknownHandler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text("I didn't understand that.")
