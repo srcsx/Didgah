@@ -19,6 +19,7 @@ def initializeUser(user_id: int) -> None:
         }
 
 async def mainFlow(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Main menu interaction to select professor, lesson, or comment."""
     user_id = update.message.from_user.id
     initializeUser(user_id)
 
@@ -31,6 +32,7 @@ async def mainFlow(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text("Click the buttons below to choose a professor or a lesson:", reply_markup=reply_markup)
     
 async def inlineQuery(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handles inline queries for professor and lesson selection."""
     query = update.inline_query.query.lower()
     
     if query.startswith("#professors"):
@@ -58,7 +60,7 @@ async def inlineQuery(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         await update.inline_query.answer(results)
         
 async def messageHandler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handles regular text messages and processes user inputs and selections."""
+    """Handles regular text messages and processes user comments and selections."""
     user_id = update.message.from_user.id
     initializeUser(user_id)
 
@@ -92,6 +94,8 @@ async def messageHandler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         user_data[user_id]["comment"] = message
         user_data[user_id]["awaiting_comment"] = False
         await update.message.reply_text("Your comment has been saved.")
+    else :
+        await update.message.reply_text("Your command in not recognized.")
     
 async def CommentHandler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
@@ -104,3 +108,6 @@ async def CommentHandler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             user_data[user_id]["awaiting_comment"] = True
         else:
             await query.message.reply_text("Please first select a professor and a lesson to send a comment.")
+            
+async def unknownHandler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await update.message.reply_text("I didn't understand that.")
