@@ -5,6 +5,7 @@ from validators import isUserInVerifiedGroup
 from config.init import TELEGRAM_SHARE_GROUP_ID
 from database.query.prof import selectAllProfs
 from database.query.course import selectAllCourses
+from database.query.comment import createComment
 
 def getProfessors() -> dict:
     try:
@@ -147,7 +148,9 @@ async def messageHandler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         user_data[user_id]["comment"] = message
         user_data[user_id]["awaiting_comment"] = False
         await sendCommentToGroup(update,context,user_id)
+        await createComment(professors[user_data[user_id]["selected_professor"]], lessons[user_data[user_id]["selected_lesson"], user_data[user_id]["comment"], user_id])
         await update.message.reply_text("Your comment has been saved.")
+        del user_data[user_id]
     else :
         await update.message.reply_text("Your command in not recognized.")
     
