@@ -3,11 +3,22 @@ from telegram.ext import ContextTypes
 from uuid import uuid4
 from validators import isUserInVerifiedGroup
 from config.init import TELEGRAM_SHARE_GROUP_ID
+from database.query.prof import selectAllProfs
+from database.query.course import selectAllCourses
 
-#TODO get professors name and lessons from database
-user_data = {}
-professors_name = ["professor1" , "professor2" , "professor3"]
-lessons = ["1", "2", "3"]
+def getProfessors() -> dict:
+    try:
+        return {prof.name: prof.id for prof in selectAllProfs()}
+    except Exception as e:
+        print(f"Failed to fetch professors: {e}")
+        return {}
+    
+def getLessons() -> dict:
+    try:
+        return {lesson.name: lesson.id for lesson in selectAllCourses()}
+    except Exception as e:
+        print(f"Failed to fetch lessons: {e}")
+        return {}
 
 def initializeUser(user_id: int) -> None:
     if user_id not in user_data:
@@ -19,6 +30,12 @@ def initializeUser(user_id: int) -> None:
             "comment": None
         }
         
+professors = getProfessors()
+lessons = getLessons()
+user_data = {}
+professors_name = list(getProfessors().keys())
+lessons_name = list(getLessons().keys())
+
 async def startCommand(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_id = update.message.from_user.id
     initializeUser(user_id)
@@ -72,10 +89,43 @@ async def inlineQuery(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
                 title=lesson,
                 input_message_content=InputTextMessageContent(lesson),
             )
-            for lesson in lessons if keyword in lesson.lower()
+            for lesson in lessons_name if keyword in lesson.lower()
         ]
         await update.inline_query.answer(results)
+
+async def handleProfessorSelection(update: Update, user_id: int, professor_name: str) -> None:
+    if user_data[user_id]["selected_professor"]:
+        await update.message.reply_text(
+            f"You've already selected {user_data[user_id]["selected_professor"]} as your professor. "
+            "Reply with 'reset selection' to reset your choices."
+        )
+    else:
+        user_data[user_id]["selected_professor"] = professor_name
+        await update.message.reply_text(f"You selected {professor_name} as your professor.")
         
+async def handleLessonSelection(update: Update, user_id: int, lesson_name: str) -> None:
+    if user_data[user_id]["selected_lesson"]:
+            await update.message.reply_text(
+                f"You've already selected {user_data[user_id]['selected_lesson']} as your lesson. "
+                "Reply with 'reset selection' to reset your choices."
+            )
+    else:
+        user_data[user_id]["selected_lesson"] = lesson_name
+        await update.message.reply_text(f"You selected {lesson_name} as your lesson.")
+        
+async def resetUserSelection(update: Update, user_id):
+    user_data[user_id].update({"selected_professor": None, "selected_lesson": None})
+    await update.message.reply_text("Selections reset. You can choose again.")
+        
+async def sendCommentToGroup(updata: Update, context: ContextTypes.DEFAULT_TYPE, user_id: int) -> None:
+    msg = (
+            f"New comment!:\n\n"
+            f"Professor: {user_data[user_id]["selected_professor"]}\n"
+            f"Lesson: {user_data[user_id]["selected_lesson"]}\n"
+            f"Comment: {user_data[user_id]["comment"]}\n"
+        )
+    await context.bot.send_message(chat_id=TELEGRAM_SHARE_GROUP_ID, text=msg, parse_mode="Markdown")
+         
 async def messageHandler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handles regular text messages and processes user comments and selections."""
     user_id = update.message.from_user.id
@@ -87,41 +137,16 @@ async def messageHandler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     message = update.message.text.strip()
 
-    if message in professors_name:
-        if user_data[user_id]["selected_professor"]:
-            await update.message.reply_text(
-                f"You've already selected {user_data[user_id]['selected_professor']} as your professor. "
-                "Reply with 'reset selection' to reset your choices."
-            )
-        else:
-            user_data[user_id]["selected_professor"] = message
-            await update.message.reply_text(f"You selected {message} as your professor.")
-
+    if message in professors:
+        handleProfessorSelection(update, user_id, message)
     elif message in lessons:
-        if user_data[user_id]["selected_lesson"]:
-            await update.message.reply_text(
-                f"You've already selected {user_data[user_id]['selected_lesson']} as your lesson. "
-                "Reply with 'reset selection' to reset your choices."
-            )
-        else:
-            user_data[user_id]["selected_lesson"] = message
-            await update.message.reply_text(f"You selected {message} as your lesson.")
-
+        handleLessonSelection(update, user_id, message)
     elif message.lower() == "reset selection":
-        user_data[user_id].update({"selected_professor": None, "selected_lesson": None})
-        await update.message.reply_text("Selections reset. You can choose again.")
-
+        resetUserSelection(update, user_id)
     elif user_data[user_id]["awaiting_comment"] and user_data[user_id]["selected_professor"] and user_data[user_id]["selected_lesson"]:
         user_data[user_id]["comment"] = message
         user_data[user_id]["awaiting_comment"] = False
-        msg = (
-            f"New comment!:\n\n"
-            f"Professor: {user_data[user_id]["selected_professor"]}\n"
-            f"Lesson: {user_data[user_id]["selected_lesson"]}\n"
-            f"Comment: {user_data[user_id]["comment"]}\n"
-        )
-        await context.bot.send_message(chat_id=TELEGRAM_SHARE_GROUP_ID, text=msg, parse_mode="Markdown")
-        #TODO send these data to database and then remove user from user_data dic
+        await sendCommentToGroup(update,context,user_id)
         await update.message.reply_text("Your comment has been saved.")
     else :
         await update.message.reply_text("Your command in not recognized.")
