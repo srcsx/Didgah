@@ -2,7 +2,9 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InlineQ
 from telegram.ext import ContextTypes
 from uuid import uuid4
 from validators import isUserInVerifiedGroup
+from config.init import TELEGRAM_SHARE_GROUP_ID
 
+#TODO get professors name and lessons from database
 user_data = {}
 professors_name = ["professor1" , "professor2" , "professor3"]
 lessons = ["1", "2", "3"]
@@ -10,28 +12,34 @@ lessons = ["1", "2", "3"]
 def initializeUser(user_id: int) -> None:
     if user_id not in user_data:
         user_data[user_id] = {
+            "verified": False,
             "selected_professor": None,
             "selected_lesson": None,
             "awaiting_comment": False,
             "comment": None
         }
-
+        
 async def startCommand(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_id = update.message.from_user.id
     initializeUser(user_id)
     await update.message.reply_text(f'Hello {update.effective_user.first_name}')
+    #TODO need to check if user already exist in database
     if isUserInVerifiedGroup(update , context):
+        user_data[user_id]["verified"] = True
         await mainFlow(update , context)
     else:
+        user_data[user_id]["verified"] = False
         await update.message.reply_text("Please first join the channel.")
 
 async def mainFlow(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Main menu interaction to select professor, lesson, or comment."""
     user_id = update.message.from_user.id
     initializeUser(user_id)
-    if not isUserInVerifiedGroup(update , context):
+    
+    if not user_data[user_id]["verified"]:
         await update.message.reply_text("Please first join the channel.")
         return
+    
     keyboard = [
         [InlineKeyboardButton("Choose your professor", switch_inline_query_current_chat="#professors"),
          InlineKeyboardButton("Choose your lesson", switch_inline_query_current_chat="#lessons")],
@@ -73,7 +81,7 @@ async def messageHandler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     user_id = update.message.from_user.id
     initializeUser(user_id)
     
-    if not isUserInVerifiedGroup(update , context):
+    if not user_data[user_id]["verified"]:
         await update.message.reply_text("Please first join the channel.")
         return
 
@@ -106,6 +114,14 @@ async def messageHandler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     elif user_data[user_id]["awaiting_comment"] and user_data[user_id]["selected_professor"] and user_data[user_id]["selected_lesson"]:
         user_data[user_id]["comment"] = message
         user_data[user_id]["awaiting_comment"] = False
+        msg = (
+            f"New comment!:\n\n"
+            f"Professor: {user_data[user_id]["selected_professor"]}\n"
+            f"Lesson: {user_data[user_id]["selected_lesson"]}\n"
+            f"Comment: {user_data[user_id]["comment"]}\n"
+        )
+        await context.bot.send_message(chat_id=TELEGRAM_SHARE_GROUP_ID, text=msg, parse_mode="Markdown")
+        #TODO send these data to database and then remove user from user_data dic
         await update.message.reply_text("Your comment has been saved.")
     else :
         await update.message.reply_text("Your command in not recognized.")
