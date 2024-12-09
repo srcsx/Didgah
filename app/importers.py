@@ -14,16 +14,13 @@ class CSVImport:
             pandas.DataFrame: Processed data.
             None or an empty DataFrame if an error occurs.
         """
-        try:
-            if os.path.exists(csv_file_path):
-                try:
-                    return pd.read_csv(csv_file_path)
-                except:
-                    print("ERROR: Csv file is not readable.")
-            else:
-                print(f"ERROR: File path not found.\nGiven Path: {csv_file_path}")
-        except Exception as e:
-            print(f"ERROR: Error reading CSV file: {e}")
+        if os.path.exists(csv_file_path):
+            try:
+                return pd.read_csv(csv_file_path)
+            except Exception as e:
+                print(f"ERROR: Encoutering problem while reading csv file.\nInnerException: {e}")
+        else:
+            print(f"ERROR: File path not found.\nGiven Path: {csv_file_path}")
 
 
     def saveCsvTotable(csv_file_path, save_method):
@@ -47,7 +44,7 @@ class CSVImport:
                     result = save_method(i[0])
                     save_result.append(result)
                 except Exception as e:
-                    print(f"ERROR: There is an exception in the given save_method.\nInnerException: {e}")
+                    print(f"ERROR: There is an exception in the given parameter: save_method.\nInnerException: {e}")
         else:
             print('ERROR: Dataframe is empty.')
             save_result.append(-1)
@@ -55,7 +52,9 @@ class CSVImport:
         return save_result
 
 
-# Usage Test
-if __name__ == "__main__":
-    from ..database.query.prof import createProf # A database save method dedicated for Prof model
-    CSVImport.saveCsvTotable("path", createProf)
+# # Usage Test
+# if __name__ == "__main__":
+#     from ..database.query.prof import createProf # A database save method dedicated for Prof model
+#     from ..database.query.course import createCourse
+#     CSVImport.saveCsvTotable("path", createProf)
+#     CSVImport.saveCsvTotable("path", createCourse)
